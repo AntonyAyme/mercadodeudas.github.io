@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Consulta de Deudas</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #f4f4f4;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    input[type="text"] {
+      padding: 8px;
+      width: 200px;
+    }
+
+    button {
+      padding: 8px 16px;
+      margin-left: 10px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    table {
+      margin-top: 20px;
+      width: 100%;
+      border-collapse: collapse;
+      background-color: white;
+    }
+
+    th, td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      text-align: center;
+    }
+
+    #mensaje {
+      margin-top: 20px;
+      font-weight: bold;
+      color: red;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Consulta de Deudas por DNI</h1>
+
+  <div style="text-align: center;">
+    <input type="text" id="dniInput" placeholder="Ingrese su DNI">
+    <button onclick="consultarDeuda()">Consultar</button>
+  </div>
+
+  <div id="mensaje"></div>
+  <table id="resultado" style="display:none;">
+    <thead>
+      <tr>
+        <th>DNI</th>
+        <th>Nombre</th>
+        <th>Categoría</th>
+        <th>Deuda (S/)</th>
+        <th>Vencimiento</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    function consultarDeuda() {
+      const dni = document.getElementById("dniInput").value.trim();
+      const mensaje = document.getElementById("mensaje");
+      const tabla = document.getElementById("resultado");
+      const tbody = tabla.querySelector("tbody");
+
+      if (dni === "") {
+        mensaje.textContent = "Por favor, ingrese un DNI.";
+        tabla.style.display = "none";
+        return;
+      }
+
+      mensaje.textContent = "Buscando...";
+      fetch(`https://script.google.com/macros/s/AKfycbxL2B9Dq0xMU27j-2uHx2_cF96__ux2HezSea-Umj2cjhAjpkZkpcTWWnBgdcIMBEUH/exec?dni=${dni}`)
+        .then(res => res.json())
+        .then(data => {
+          tbody.innerHTML = "";
+          if (data.mensaje) {
+            mensaje.textContent = data.mensaje;
+            tabla.style.display = "none";
+          } else {
+            mensaje.textContent = "";
+            data.forEach(deuda => {
+              const fila = `
+                <tr>
+                  <td>${deuda.dni}</td>
+                  <td>${deuda.nombre}</td>
+                  <td>${deuda.categoria}</td>
+                  <td>${deuda.deuda}</td>
+                  <td>${deuda.vencimiento}</td>
+                </tr>`;
+              tbody.innerHTML += fila;
+            });
+            tabla.style.display = "table";
+          }
+        })
+        .catch(err => {
+          mensaje.textContent = "Error al consultar. Intenta más tarde.";
+          tabla.style.display = "none";
+        });
+    }
+  </script>
+
+</body>
+</html>
+
