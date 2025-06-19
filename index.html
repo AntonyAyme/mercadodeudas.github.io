@@ -206,6 +206,18 @@
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }
+  // === NUEVO CÓDIGO para autocompletar y consultar por DNI desde la URL ===
+window.addEventListener('DOMContentLoaded', () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const dniUrl = urlParams.get('dni');
+
+  if (dniUrl) {
+    const dniInput = document.getElementById("dniInput");
+    dniInput.value = dniUrl;
+    consultarDeuda(); // Ejecuta automáticamente la búsqueda
+  }
+});
+
 </script>
 
 </body>
