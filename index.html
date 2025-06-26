@@ -4,32 +4,43 @@
   <meta charset="UTF-8">
   <title>Gestión de Deudas</title>
   <style>
+    :root {
+      --maiz: #FD9800;
+      --maiz-secundario: #E98C00;
+      --azul-oscuro: #0F172A;
+      --gris-oscuro: #454F5E;
+      --beige: #FEF9E1;
+      --beige-suave: #F9F0C8;
+      --blanco: #FFFFFF;
+    }
+
     body {
       font-family: 'Segoe UI', sans-serif;
-      background-color: #fffdfa;
-      color: #000;
+      background-color: var(--beige-suave);
+      color: var(--azul-oscuro);
       padding: 30px;
       text-align: center;
     }
 
     h2 {
-      color: #d4af37;
+      color: var(--maiz);
     }
 
     input, select {
       padding: 12px;
       width: 280px;
       font-size: 16px;
-      border: 2px solid #d4af37;
+      border: 2px solid var(--maiz);
       border-radius: 6px;
       margin: 5px 0;
+      background-color: var(--blanco);
     }
 
     button {
       padding: 10px 16px;
       font-size: 15px;
-      background-color: #d4af37;
-      color: #000;
+      background-color: var(--maiz);
+      color: var(--azul-oscuro);
       border: none;
       border-radius: 6px;
       cursor: pointer;
@@ -37,12 +48,30 @@
     }
 
     button:hover {
-      background-color: #e6c74f;
+      background-color: var(--maiz-secundario);
+    }
+
+    .btn-categoria {
+      width: 140px;
+      height: 80px;
+      font-size: 18px;
+      font-weight: bold;
+      background-color: var(--maiz);
+      color: var(--azul-oscuro);
+      border: none;
+      border-radius: 12px;
+      margin: 10px;
+      cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-categoria:hover {
+      background-color: var(--maiz-secundario);
     }
 
     .tarjeta {
-      background-color: #fff;
-      border-left: 6px solid #d4af37;
+      background-color: var(--beige);
+      border-left: 6px solid var(--maiz);
       padding: 15px;
       margin: 20px auto;
       border-radius: 10px;
@@ -55,17 +84,9 @@
       font-weight: bold;
     }
 
-    .estado-pendiente {
-      color: red;
-    }
-
-    .estado-enproceso {
-      color: orange;
-    }
-
-    .estado-pagado {
-      color: green;
-    }
+    .estado-pendiente { color: red; }
+    .estado-enproceso { color: orange; }
+    .estado-pagado { color: green; }
 
     .comprobante-link {
       font-size: 14px;
@@ -80,7 +101,7 @@
     hr {
       border: none;
       height: 1px;
-      background-color: #eee;
+      background-color: var(--gris-oscuro);
       margin: 30px auto;
       max-width: 600px;
     }
@@ -92,11 +113,20 @@
   <input type="email" id="emailInput" placeholder="Ej. juan@example.com" required>
   <button onclick="buscarPagos()">Buscar</button>
 
+  <div id="filtros" style="display:none; margin: 30px 0;">
+    <button class="btn-categoria" onclick="filtrarCategoria('alquiler')">Alquiler</button>
+    <button class="btn-categoria" onclick="filtrarCategoria('vigilancia')">Vigilancia</button>
+    <button class="btn-categoria" onclick="filtrarCategoria('luz')">Luz</button>
+    <button class="btn-categoria" onclick="filtrarCategoria('agua')">Agua</button>
+    <button class="btn-categoria" onclick="filtrarCategoria('')">Todas</button>
+  </div>
+
   <div id="resultados"></div>
 
   <script>
     const endpoint = "https://script.google.com/macros/s/AKfycbybsBKmk4XR2XwUyS3ytoW64yFclmJAhE1s9i5ejj5rukbzKvFTizAEQwvBKNTxNNo5/exec";
     let datos = [];
+    let emailActual = "";
 
     function buscarPagos() {
       const email = document.getElementById('emailInput').value.trim();
@@ -105,11 +135,14 @@
         return;
       }
 
+      emailActual = email;
+
       fetch(`${endpoint}?email=${encodeURIComponent(email)}`)
         .then(res => res.json())
         .then(data => {
           datos = data;
-          renderResultados(data, email);
+          document.getElementById("filtros").style.display = data.length > 0 ? "block" : "none";
+          renderResultados(data);
         })
         .catch(err => {
           console.error(err);
@@ -117,7 +150,7 @@
         });
     }
 
-    function renderResultados(data, email) {
+    function renderResultados(data) {
       const contenedor = document.getElementById("resultados");
       contenedor.innerHTML = "";
 
@@ -135,7 +168,7 @@
             : "estado-pendiente";
 
         const tarjeta = document.createElement("div");
-        tarjeta.className = "tarjeta";
+        tarjeta.className = "tarjeta tarjeta-categoria-" + item.categoría.toLowerCase();
         tarjeta.innerHTML = `
           <div><strong>Mes:</strong> ${item.mes}</div>
           <div><strong>Categoría:</strong> ${item.categoría}</div>
@@ -144,7 +177,7 @@
           ${item.comprobante ? `<a class="comprobante-link" href="${item.comprobante}" target="_blank">Ver comprobante</a>` : ""}
         `;
 
-        // Solo mostrar subida si está pendiente
+        // Subir comprobante solo si está pendiente
         if (item.estado.toLowerCase() === "pendiente") {
           const form = document.createElement("form");
           form.innerHTML = `
@@ -153,7 +186,7 @@
           `;
           form.addEventListener("submit", e => {
             e.preventDefault();
-            subirComprobante(email, item.mes, item.categoría, index);
+            subirComprobante(emailActual, item.mes, item.categoría, index);
           });
           tarjeta.appendChild(form);
         }
@@ -191,7 +224,7 @@
           });
           const texto = await res.text();
           alert(texto);
-          buscarPagos(); // Refrescar lista
+          buscarPagos(); // Refrescar
         } catch (err) {
           console.error(err);
           alert("Error al subir comprobante.");
@@ -199,6 +232,14 @@
       };
 
       reader.readAsDataURL(archivo);
+    }
+
+    function filtrarCategoria(categoria) {
+      const tarjetas = document.querySelectorAll(".tarjeta");
+      tarjetas.forEach(t => {
+        const visible = !categoria || t.classList.contains(`tarjeta-categoria-${categoria.toLowerCase()}`);
+        t.style.display = visible ? "block" : "none";
+      });
     }
   </script>
 </body>
