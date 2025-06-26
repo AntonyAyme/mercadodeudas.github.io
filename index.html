@@ -2,225 +2,126 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Consulta de Deudas por DNI</title>
+  <title>Consulta de Deudas</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-      background-color: #f4f4f4;
-    }
-    h1 {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #fffdfa;
+      color: #000;
+      padding: 30px;
       text-align: center;
     }
-    input[type="text"] {
-      padding: 8px;
-      width: 200px;
+
+    h2 {
+      color: #d4af37;
     }
+
+    input[type="email"] {
+      padding: 12px;
+      width: 280px;
+      font-size: 16px;
+      border: 2px solid #d4af37;
+      border-radius: 6px;
+    }
+
     button {
-      padding: 8px 16px;
-      margin: 5px 5px 5px 0;
-      background-color: #007bff;
-      color: white;
+      padding: 12px 20px;
+      font-size: 16px;
+      background-color: #d4af37;
+      color: #000;
       border: none;
+      border-radius: 6px;
       cursor: pointer;
-      border-radius: 3px;
+      margin-left: 10px;
     }
+
     button:hover {
-      background-color: #0056b3;
+      background-color: #e6c74f;
     }
-    table {
-      margin-top: 20px;
-      width: 100%;
-      border-collapse: collapse;
-      background-color: white;
-    }
-    th, td {
-      padding: 10px;
-      border: 1px solid #ddd;
-      text-align: center;
-    }
-    #mensaje {
-      margin-top: 20px;
+
+    .btn-categoria {
+      width: 150px;
+      height: 100px;
+      margin: 10px;
+      font-size: 18px;
       font-weight: bold;
+      background-color: #d4af37;
+      color: #000;
+      border: none;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      cursor: pointer;
+    }
+
+    .btn-categoria:hover {
+      background-color: #f3d66b;
+    }
+
+    .resultado {
+      margin-top: 20px;
+      text-align: left;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .tarjeta {
+      background-color: #fff;
+      border-left: 6px solid #d4af37;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .estado-pagado {
+      color: green;
+      font-weight: bold;
+    }
+
+    .estado-pendiente {
       color: red;
-      text-align: center;
-    }
-    #filtros {
-      margin-top: 20px;
-      text-align: center;
-    }
-    #totalDeuda {
-      margin-top: 15px;
       font-weight: bold;
-      text-align: center;
     }
   </style>
 </head>
 <body>
+  <h2>Consulta de Deudas</h2>
 
-  <h1>Consulta de Deudas por DNI</h1>
+  <input type="email" id="emailInput" placeholder="ej. juan@example.com">
+  <button onclick="buscarPagos()">Buscar</button>
 
-  <div style="text-align: center;">
-    <input type="text" id="dniInput" placeholder="Ingrese su DNI" />
-    <button onclick="consultarDeuda()">Consultar</button>
+  <div id="botonesCategorias" style="display:none; margin-top: 30px;">
+    <h3>Filtrar por categoría</h3>
+    <button class="btn-categoria" onclick="filtrarCategoria('alquiler')">Alquiler</button>
+    <button class="btn-categoria" onclick="filtrarCategoria('vigilancia')">Vigilancia</button>
+    <button class="btn-categoria" onclick="filtrarCategoria('luz')">Luz</button>
+    <button class="btn-categoria" onclick="filtrarCategoria('agua')">Agua</button>
   </div>
 
-  <div id="mensaje"></div>
+  <div id="resultados" class="resultado"></div>
 
-  <div id="filtros" style="display:none;">
-    <button onclick="filtrarCategoria('Todos')">Todos</button>
-    <button onclick="filtrarCategoria('Luz')">Luz</button>
-    <button onclick="filtrarCategoria('Agua')">Agua</button>
-    <button onclick="filtrarCategoria('Seguridad')">Seguridad</button>
-    <button onclick="filtrarCategoria('Alquiler')">Alquiler</button>
-  </div>
+  <script>
+    const endpoint = 'https://script.google.com/macros/s/AKfycbxxNMy9XrpsY_kQH4QPt1TA2CZVhaXGnBnnTZ3jYobXyjfqfHeB_cYLLn4eeCIUZPCb/exec';
+    let datosOriginales = [];
 
-  <div id="totalDeuda" style="display:none;">Total deuda: S/ 0</div>
+    function buscarPagos() {
+      const email = document.getElementById('emailInput').value.trim();
+      if (!email) {
+        alert('Por favor ingresa un correo válido.');
+        return;
+      }
 
-  <table id="resultado" style="display:none;">
-    <thead>
-      <tr>
-        <th>DNI</th>
-        <th>Nombre</th>
-        <th>Categoría</th>
-        <th>Deuda (S/)</th>
-        <th>Vencimiento</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-
-  <div style="text-align:center; margin-top:15px; display:none;" id="descargaDiv">
-    <button onclick="descargarCSV()">Descargar reporte CSV</button>
-  </div>
-
-<script>
-  let datosDeuda = []; // Aquí guardaremos la info que viene del WebApp
-  let datosFiltrados = [];
-
-  function consultarDeuda() {
-    const dni = document.getElementById("dniInput").value.trim();
-    const mensaje = document.getElementById("mensaje");
-    const tabla = document.getElementById("resultado");
-    const tbody = tabla.querySelector("tbody");
-    const filtros = document.getElementById("filtros");
-    const totalDiv = document.getElementById("totalDeuda");
-    const descargaDiv = document.getElementById("descargaDiv");
-
-    if (dni === "") {
-      mensaje.textContent = "Por favor, ingrese un DNI.";
-      tabla.style.display = "none";
-      filtros.style.display = "none";
-      totalDiv.style.display = "none";
-      descargaDiv.style.display = "none";
-      return;
-    }
-
-    mensaje.textContent = "Buscando...";
-    fetch(`https://script.google.com/macros/s/AKfycbxL2B9Dq0xMU27j-2uHx2_cF96__ux2HezSea-Umj2cjhAjpkZkpcTWWnBgdcIMBEUH/exec?dni=${dni}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.mensaje) {
-          mensaje.textContent = data.mensaje;
-          tabla.style.display = "none";
-          filtros.style.display = "none";
-          totalDiv.style.display = "none";
-          descargaDiv.style.display = "none";
-          datosDeuda = [];
-        } else {
-          mensaje.textContent = "";
-          datosDeuda = data;
-          datosFiltrados = data; // inicializamos con todos
-          mostrarDatos(datosFiltrados);
-          filtros.style.display = "block";
-          totalDiv.style.display = "block";
-          descargaDiv.style.display = "block";
-        }
-      })
-      .catch(err => {
-        mensaje.textContent = "Error al consultar. Intenta más tarde.";
-        tabla.style.display = "none";
-        filtros.style.display = "none";
-        totalDiv.style.display = "none";
-        descargaDiv.style.display = "none";
-      });
-  }
-
-  function mostrarDatos(datos) {
-    const tabla = document.getElementById("resultado");
-    const tbody = tabla.querySelector("tbody");
-    const totalDiv = document.getElementById("totalDeuda");
-
-    tbody.innerHTML = "";
-    let total = 0;
-
-    datos.forEach(deuda => {
-      total += parseFloat(deuda.deuda) || 0;
-      const fila = `
-        <tr>
-          <td>${deuda.dni}</td>
-          <td>${deuda.nombre}</td>
-          <td>${deuda.categoria}</td>
-          <td>${deuda.deuda}</td>
-          <td>${deuda.vencimiento}</td>
-        </tr>`;
-      tbody.innerHTML += fila;
-    });
-
-    totalDiv.textContent = `Total deuda: S/ ${total.toFixed(2)}`;
-    tabla.style.display = datos.length ? "table" : "none";
-  }
-
-  function filtrarCategoria(categoria) {
-    if (categoria === "Todos") {
-      datosFiltrados = datosDeuda;
-    } else {
-      datosFiltrados = datosDeuda.filter(d => d.categoria.toLowerCase() === categoria.toLowerCase());
-    }
-    mostrarDatos(datosFiltrados);
-  }
-
-  function descargarCSV() {
-    if (!datosFiltrados.length) {
-      alert("No hay datos para descargar.");
-      return;
-    }
-
-    const columnas = ["dni", "nombre", "categoria", "deuda", "vencimiento"];
-    let csv = columnas.join(",") + "\n";
-
-    datosFiltrados.forEach(row => {
-      const fila = columnas.map(col => `"${row[col]}"`).join(",");
-      csv += fila + "\n";
-    });
-
-    const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `deudas_${Date.now()}.csv`;
-    a.style.display = "none";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
-  // === NUEVO CÓDIGO para autocompletar y consultar por DNI desde la URL ===
-window.addEventListener('DOMContentLoaded', () => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const dniUrl = urlParams.get('dni');
-
-  if (dniUrl) {
-    const dniInput = document.getElementById("dniInput");
-    dniInput.value = dniUrl;
-    consultarDeuda(); // Ejecuta automáticamente la búsqueda
-  }
-});
-
-</script>
-
-</body>
-</html>
-
-
+      fetch(`${endpoint}?email=${encodeURIComponent(email)}`)
+        .then(res => res.json())
+        .then(data => {
+          datosOriginales = data;
+          if (data.length === 0) {
+            document.getElementById('resultados').innerHTML = 'No se encontraron registros.';
+            document.getElementById('botonesCategorias').style.display = 'none';
+          } else {
+            mostrarResultados(data);
+            document.getElementById('botonesCategorias').style.display = 'block';
+          }
+        })
+        .catch(
