@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <title>Consulta de Deudas</title>
+  <meta charset="UTF-8">
+  <title>Gestión de Deudas</title>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -16,112 +16,190 @@
       color: #d4af37;
     }
 
-    input[type="email"] {
+    input, select {
       padding: 12px;
       width: 280px;
       font-size: 16px;
       border: 2px solid #d4af37;
       border-radius: 6px;
+      margin: 5px 0;
     }
 
     button {
-      padding: 12px 20px;
-      font-size: 16px;
+      padding: 10px 16px;
+      font-size: 15px;
       background-color: #d4af37;
       color: #000;
       border: none;
       border-radius: 6px;
       cursor: pointer;
-      margin-left: 10px;
+      margin-top: 8px;
     }
 
     button:hover {
       background-color: #e6c74f;
     }
 
-    .btn-categoria {
-      width: 150px;
-      height: 100px;
-      margin: 10px;
-      font-size: 18px;
-      font-weight: bold;
-      background-color: #d4af37;
-      color: #000;
-      border: none;
-      border-radius: 12px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-      cursor: pointer;
-    }
-
-    .btn-categoria:hover {
-      background-color: #f3d66b;
-    }
-
-    .resultado {
-      margin-top: 20px;
-      text-align: left;
-      max-width: 600px;
-      margin-left: auto;
-      margin-right: auto;
-    }
-
     .tarjeta {
       background-color: #fff;
       border-left: 6px solid #d4af37;
       padding: 15px;
-      margin-bottom: 15px;
+      margin: 20px auto;
       border-radius: 10px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      text-align: left;
+      max-width: 600px;
     }
 
-    .estado-pagado {
-      color: green;
+    .estado {
       font-weight: bold;
     }
 
     .estado-pendiente {
       color: red;
-      font-weight: bold;
+    }
+
+    .estado-enproceso {
+      color: orange;
+    }
+
+    .estado-pagado {
+      color: green;
+    }
+
+    .comprobante-link {
+      font-size: 14px;
+      margin-top: 4px;
+      display: block;
+    }
+
+    .input-archivo {
+      margin-top: 8px;
+    }
+
+    hr {
+      border: none;
+      height: 1px;
+      background-color: #eee;
+      margin: 30px auto;
+      max-width: 600px;
     }
   </style>
 </head>
 <body>
-  <h2>Consulta de Deudas</h2>
 
-  <input type="email" id="emailInput" placeholder="ej. juan@example.com">
+  <h2>Consulta de Deudas</h2>
+  <input type="email" id="emailInput" placeholder="Ej. juan@example.com" required>
   <button onclick="buscarPagos()">Buscar</button>
 
-  <div id="botonesCategorias" style="display:none; margin-top: 30px;">
-    <h3>Filtrar por categoría</h3>
-    <button class="btn-categoria" onclick="filtrarCategoria('alquiler')">Alquiler</button>
-    <button class="btn-categoria" onclick="filtrarCategoria('vigilancia')">Vigilancia</button>
-    <button class="btn-categoria" onclick="filtrarCategoria('luz')">Luz</button>
-    <button class="btn-categoria" onclick="filtrarCategoria('agua')">Agua</button>
-  </div>
-
-  <div id="resultados" class="resultado"></div>
+  <div id="resultados"></div>
 
   <script>
-    const endpoint = 'https://script.google.com/macros/s/AKfycbxxNMy9XrpsY_kQH4QPt1TA2CZVhaXGnBnnTZ3jYobXyjfqfHeB_cYLLn4eeCIUZPCb/exec';
-    let datosOriginales = [];
+    const endpoint = "https://script.google.com/macros/s/AKfycbybsBKmk4XR2XwUyS3ytoW64yFclmJAhE1s9i5ejj5rukbzKvFTizAEQwvBKNTxNNo5/exec";
+    let datos = [];
 
     function buscarPagos() {
       const email = document.getElementById('emailInput').value.trim();
       if (!email) {
-        alert('Por favor ingresa un correo válido.');
+        alert("Por favor, ingresa un correo válido.");
         return;
       }
 
       fetch(`${endpoint}?email=${encodeURIComponent(email)}`)
         .then(res => res.json())
         .then(data => {
-          datosOriginales = data;
-          if (data.length === 0) {
-            document.getElementById('resultados').innerHTML = 'No se encontraron registros.';
-            document.getElementById('botonesCategorias').style.display = 'none';
-          } else {
-            mostrarResultados(data);
-            document.getElementById('botonesCategorias').style.display = 'block';
-          }
+          datos = data;
+          renderResultados(data, email);
         })
-        .catch(
+        .catch(err => {
+          console.error(err);
+          alert("Error al consultar las deudas.");
+        });
+    }
+
+    function renderResultados(data, email) {
+      const contenedor = document.getElementById("resultados");
+      contenedor.innerHTML = "";
+
+      if (data.length === 0) {
+        contenedor.innerHTML = "<p>No se encontraron deudas para este correo.</p>";
+        return;
+      }
+
+      data.forEach((item, index) => {
+        const estadoClass =
+          item.estado.toLowerCase() === "pagado"
+            ? "estado-pagado"
+            : item.estado.toLowerCase() === "en proceso"
+            ? "estado-enproceso"
+            : "estado-pendiente";
+
+        const tarjeta = document.createElement("div");
+        tarjeta.className = "tarjeta";
+        tarjeta.innerHTML = `
+          <div><strong>Mes:</strong> ${item.mes}</div>
+          <div><strong>Categoría:</strong> ${item.categoría}</div>
+          <div><strong>Monto:</strong> S/ ${item.monto}</div>
+          <div><strong>Estado:</strong> <span class="estado ${estadoClass}">${item.estado}</span></div>
+          ${item.comprobante ? `<a class="comprobante-link" href="${item.comprobante}" target="_blank">Ver comprobante</a>` : ""}
+        `;
+
+        // Solo mostrar subida si está pendiente
+        if (item.estado.toLowerCase() === "pendiente") {
+          const form = document.createElement("form");
+          form.innerHTML = `
+            <input type="file" class="input-archivo" accept="image/*" required id="archivo-${index}">
+            <button type="submit">Subir comprobante</button>
+          `;
+          form.addEventListener("submit", e => {
+            e.preventDefault();
+            subirComprobante(email, item.mes, item.categoría, index);
+          });
+          tarjeta.appendChild(form);
+        }
+
+        contenedor.appendChild(tarjeta);
+        const separador = document.createElement("hr");
+        contenedor.appendChild(separador);
+      });
+    }
+
+    function subirComprobante(email, mes, categoria, index) {
+      const inputArchivo = document.getElementById(`archivo-${index}`);
+      const archivo = inputArchivo.files[0];
+
+      if (!archivo) {
+        alert("Selecciona un archivo.");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = async function () {
+        const base64 = reader.result;
+
+        const formData = new URLSearchParams();
+        formData.append("email", email);
+        formData.append("mes", mes);
+        formData.append("categoria", categoria);
+        formData.append("archivo", base64);
+        formData.append("nombre", archivo.name);
+
+        try {
+          const res = await fetch(endpoint, {
+            method: "POST",
+            body: formData
+          });
+          const texto = await res.text();
+          alert(texto);
+          buscarPagos(); // Refrescar lista
+        } catch (err) {
+          console.error(err);
+          alert("Error al subir comprobante.");
+        }
+      };
+
+      reader.readAsDataURL(archivo);
+    }
+  </script>
+</body>
+</html>
