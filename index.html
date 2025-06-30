@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Gestión de Deudas</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
     :root {
       --maiz: #FD9800;
@@ -26,7 +27,7 @@
       color: var(--maiz);
     }
 
-    input, select {
+    input {
       padding: 12px;
       width: 280px;
       font-size: 16px;
@@ -69,15 +70,21 @@
       background-color: var(--maiz-secundario);
     }
 
+    .tarjetas-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      justify-content: center;
+      margin-top: 20px;
+    }
+
     .tarjeta {
       background-color: var(--beige);
       border-left: 6px solid var(--maiz);
       padding: 15px;
-      margin: 20px auto;
       border-radius: 10px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
       text-align: left;
-      max-width: 600px;
     }
 
     .estado {
@@ -98,12 +105,34 @@
       margin-top: 8px;
     }
 
-    hr {
-      border: none;
-      height: 1px;
-      background-color: var(--gris-oscuro);
-      margin: 30px auto;
-      max-width: 600px;
+    #total {
+      margin-top: 20px;
+      font-size: 20px;
+      font-weight: bold;
+      color: var(--azul-oscuro);
+    }
+
+    #mensaje-carga {
+      font-weight: bold;
+      margin-top: 15px;
+      color: var(--gris-oscuro);
+      display: none;
+    }
+
+    .spinner {
+      border: 4px solid #ccc;
+      border-top: 4px solid var(--maiz);
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+      margin-left: 8px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
   </style>
 </head>
@@ -112,6 +141,7 @@
   <h2>Consulta de Deudas</h2>
   <input type="email" id="emailInput" placeholder="Ej. juan@example.com" required>
   <button onclick="buscarPagos()">Buscar</button>
+  <div id="mensaje-carga"></div>
 
   <div id="filtros" style="display:none; margin: 30px 0;">
     <button class="btn-categoria" onclick="filtrarCategoria('alquiler')">Alquiler</button>
@@ -121,12 +151,23 @@
     <button class="btn-categoria" onclick="filtrarCategoria('')">Todas</button>
   </div>
 
-  <div id="resultados"></div>
+  <div id="total" style="display:none;"></div>
+  <div id="resultados" class="tarjetas-container"></div>
 
   <script>
     const endpoint = "https://script.google.com/macros/s/AKfycbybsBKmk4XR2XwUyS3ytoW64yFclmJAhE1s9i5ejj5rukbzKvFTizAEQwvBKNTxNNo5/exec";
     let datos = [];
     let emailActual = "";
+
+    function mostrarMensaje(texto) {
+      const msg = document.getElementById("mensaje-carga");
+      msg.innerHTML = texto + ' <span class="spinner"></span>';
+      msg.style.display = "inline-block";
+    }
+
+    function ocultarMensaje() {
+      document.getElementById("mensaje-carga").style.display = "none";
+    }
 
     function buscarPagos() {
       const email = document.getElementById('emailInput').value.trim();
@@ -136,15 +177,18 @@
       }
 
       emailActual = email;
+      mostrarMensaje("Buscando deudas...");
 
       fetch(`${endpoint}?email=${encodeURIComponent(email)}`)
         .then(res => res.json())
         .then(data => {
+          ocultarMensaje();
           datos = data;
           document.getElementById("filtros").style.display = data.length > 0 ? "block" : "none";
           renderResultados(data);
         })
         .catch(err => {
+          ocultarMensaje();
           console.error(err);
           alert("Error al consultar las deudas.");
         });
@@ -153,13 +197,19 @@
     function renderResultados(data) {
       const contenedor = document.getElementById("resultados");
       contenedor.innerHTML = "";
+      let total = 0;
+      document.getElementById("total").style.display = data.length ? "block" : "none";
 
       if (data.length === 0) {
         contenedor.innerHTML = "<p>No se encontraron deudas para este correo.</p>";
+        document.getElementById("total").innerText = "";
         return;
       }
 
       data.forEach((item, index) => {
+        const monto = parseFloat(item.monto) || 0;
+        total += monto;
+
         const estadoClass =
           item.estado.toLowerCase() === "pagado"
             ? "estado-pagado"
@@ -170,14 +220,18 @@
         const tarjeta = document.createElement("div");
         tarjeta.className = "tarjeta tarjeta-categoria-" + item.categoría.toLowerCase();
         tarjeta.innerHTML = `
-          <div><strong>Mes:</strong> ${item.mes}</div>
-          <div><strong>Categoría:</strong> ${item.categoría}</div>
-          <div><strong>Monto:</strong> S/ ${item.monto}</div>
-          <div><strong>Estado:</strong> <span class="estado ${estadoClass}">${item.estado}</span></div>
-          ${item.comprobante ? `<a class="comprobante-link" href="${item.comprobante}" target="_blank">Ver comprobante</a>` : ""}
+          <div id="boleta-${index}">
+            <strong>Boleta de Pago</strong><br><br>
+            <div><strong>Email:</strong> ${emailActual}</div>
+            <div><strong>Mes:</strong> ${item.mes}</div>
+            <div><strong>Categoría:</strong> ${item.categoría}</div>
+            <div><strong>Monto:</strong> S/ ${monto.toFixed(2)}</div>
+            <div><strong>Estado:</strong> <span class="estado ${estadoClass}">${item.estado}</span></div>
+            ${item.comprobante ? `<a class="comprobante-link" href="${item.comprobante}" target="_blank">Ver comprobante</a>` : ""}
+          </div>
+          <button onclick="descargarBoleta(${index}, '${item.mes}', '${item.categoría}')">Descargar boleta</button>
         `;
 
-        // Subir comprobante solo si está pendiente
         if (item.estado.toLowerCase() === "pendiente") {
           const form = document.createElement("form");
           form.innerHTML = `
@@ -192,9 +246,9 @@
         }
 
         contenedor.appendChild(tarjeta);
-        const separador = document.createElement("hr");
-        contenedor.appendChild(separador);
       });
+
+      document.getElementById("total").innerText = `Total mostrado: S/ ${total.toFixed(2)}`;
     }
 
     function subirComprobante(email, mes, categoria, index) {
@@ -205,6 +259,8 @@
         alert("Selecciona un archivo.");
         return;
       }
+
+      mostrarMensaje("Subiendo comprobante...");
 
       const reader = new FileReader();
       reader.onload = async function () {
@@ -223,9 +279,11 @@
             body: formData
           });
           const texto = await res.text();
+          ocultarMensaje();
           alert(texto);
-          buscarPagos(); // Refrescar
+          buscarPagos();
         } catch (err) {
+          ocultarMensaje();
           console.error(err);
           alert("Error al subir comprobante.");
         }
@@ -236,10 +294,29 @@
 
     function filtrarCategoria(categoria) {
       const tarjetas = document.querySelectorAll(".tarjeta");
+      let totalFiltrado = 0;
       tarjetas.forEach(t => {
         const visible = !categoria || t.classList.contains(`tarjeta-categoria-${categoria.toLowerCase()}`);
         t.style.display = visible ? "block" : "none";
+        if (visible) {
+          const montoTexto = t.querySelector("div:nth-child(4)").innerText;
+          const monto = parseFloat(montoTexto.replace(/[^\d.]/g, '')) || 0;
+          totalFiltrado += monto;
+        }
       });
+      document.getElementById("total").innerText = `Total mostrado: S/ ${totalFiltrado.toFixed(2)}`;
+    }
+
+    function descargarBoleta(index, mes, categoria) {
+      const boleta = document.getElementById(`boleta-${index}`);
+      const opt = {
+        margin: 0.5,
+        filename: `boleta-${mes}-${categoria}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+      };
+      html2pdf().set(opt).from(boleta).save();
     }
   </script>
 </body>
