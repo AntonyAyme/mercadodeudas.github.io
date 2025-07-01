@@ -2,230 +2,264 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Gestión de Pagos por DNI</title>
+  <title>Gestión de Pagos</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
     :root {
-      --maiz: #FD9800;
-      --maiz-secundario: #E98C00;
-      --azul-oscuro: #0F172A;
-      --gris-oscuro: #454F5E;
-      --beige: #FEF9E1;
-      --beige-suave: #F9F0C8;
+      --naranja: #FF8F1C;
+      --naranja-vivo: #ff6900;
+      --azul-oscuro: #32373c;
+      --gris-oscuro: #666666;
+      --blanco-roto: #F8F8F8;
       --blanco: #FFFFFF;
+      --gris-claro: #C7C7C7;
+      --gris-medio: #4A4A4A;
+      --rojo: #CF2E2E;
     }
 
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: var(--beige-suave);
+      font-family: 'DM Sans', sans-serif;
+      background-color: var(--blanco-roto);
+      margin: 0;
+      padding: 20px;
       color: var(--azul-oscuro);
-      padding: 30px;
+    }
+
+    h1 {
       text-align: center;
+      color: var(--naranja);
     }
 
-    h2 {
-      color: var(--maiz);
-    }
-
-    input, select {
+    #dniInput {
       padding: 12px;
       width: 280px;
       font-size: 16px;
-      border: 2px solid var(--maiz);
+      border: 2px solid var(--naranja);
       border-radius: 6px;
-      margin: 5px 0;
-      background-color: var(--blanco);
+      margin-bottom: 10px;
     }
 
     button {
-      padding: 10px 16px;
-      font-size: 15px;
-      background-color: var(--maiz);
-      color: var(--azul-oscuro);
+      background-color: var(--naranja);
+      color: white;
       border: none;
-      border-radius: 6px;
+      padding: 10px 18px;
+      font-size: 16px;
+      border-radius: 8px;
       cursor: pointer;
-      margin-top: 8px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+      margin: 5px;
     }
 
     button:hover {
-      background-color: var(--maiz-secundario);
+      background-color: var(--naranja-vivo);
     }
 
     .btn-categoria {
-      width: 140px;
-      height: 80px;
-      font-size: 18px;
-      font-weight: bold;
-      background-color: var(--maiz);
-      color: var(--azul-oscuro);
-      border: none;
-      border-radius: 12px;
-      margin: 10px;
-      cursor: pointer;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+      background-color: var(--gris-medio);
+      color: white;
+      width: 150px;
+      height: 60px;
+      font-size: 16px;
+      border-radius: 10px;
     }
 
-    .grid-tarjetas {
+    #totalSuma {
+      font-size: 26px;
+      font-weight: bold;
+      text-align: center;
+      margin: 20px 0;
+      color: var(--azul-oscuro);
+    }
+
+    #tarjetas {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 20px;
-      justify-items: center;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 16px;
     }
 
     .tarjeta {
-      background-color: var(--beige);
-      border-left: 6px solid var(--maiz);
-      padding: 15px;
+      background: var(--blanco);
+      border-left: 6px solid var(--naranja);
       border-radius: 10px;
+      padding: 15px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      text-align: left;
-      width: 100%;
-      max-width: 500px;
     }
 
-    .estado {
-      font-weight: bold;
-    }
+    .estado-pendiente { color: var(--rojo); font-weight: bold; }
+    .estado-enproceso { color: var(--naranja-vivo); font-weight: bold; }
+    .estado-pagado { color: green; font-weight: bold; }
 
-    .estado-pendiente { color: red; }
-    .estado-enproceso { color: orange; }
-    .estado-pagado { color: green; }
+    .overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(255, 255, 255, 0.9);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 22px;
+      color: var(--azul-oscuro);
+      z-index: 9999;
+      display: none;
+    }
 
     .comprobante-link {
+      display: inline-block;
+      margin-top: 6px;
       font-size: 14px;
-      margin-top: 4px;
-      display: block;
     }
 
-    .input-archivo {
-      margin-top: 8px;
-    }
-
-    #mensajeCarga {
-      font-size: 16px;
-      font-weight: bold;
-      color: var(--gris-oscuro);
-      margin-top: 15px;
-    }
   </style>
 </head>
 <body>
-  <h2>Consulta de Pagos por DNI</h2>
-  <input type="text" id="dniInput" placeholder="Ingrese su DNI">
+
+<h1>Consulta de Pagos</h1>
+<div style="text-align: center;">
+  <input type="text" id="dniInput" placeholder="Ingresa tu DNI">
   <button onclick="buscarPagos()">Buscar</button>
-  <div id="mensajeCarga"></div>
-  <div id="filtros" style="display:none; margin: 30px 0;">
-    <button class="btn-categoria" onclick="filtrarCategoria('agua')">Agua</button>
-    <button class="btn-categoria" onclick="filtrarCategoria('luz')">Luz</button>
-    <button class="btn-categoria" onclick="filtrarCategoria('alquiler')">Alquiler</button>
-    <button class="btn-categoria" onclick="filtrarCategoria('vigilancia')">Vigilancia</button>
-    <button class="btn-categoria" onclick="filtrarCategoria('')">Todos</button>
-  </div>
-  <h3 id="totalPagos"></h3>
-  <div class="grid-tarjetas" id="resultados"></div>
+</div>
 
-  <script>
-    const endpoint = "https://script.google.com/macros/s/AKfycbybsBKmk4XR2XwUyS3ytoW64yFclmJAhE1s9i5ejj5rukbzKvFTizAEQwvBKNTxNNo5/exec";
-    let datos = [];
+<p id="buscando" style="text-align:center; display:none;">🔎 Buscando...</p>
 
-    function buscarPagos() {
-      const dni = document.getElementById("dniInput").value.trim();
-      if (!dni) return alert("Ingrese un DNI válido");
+<div id="filtros" style="text-align:center; margin-top: 20px; display:none;">
+  <button class="btn-categoria" onclick="filtrar('')">Todos</button>
+  <button class="btn-categoria" onclick="filtrar('Alquiler')">Alquiler</button>
+  <button class="btn-categoria" onclick="filtrar('Agua')">Agua</button>
+  <button class="btn-categoria" onclick="filtrar('Luz')">Luz</button>
+  <button class="btn-categoria" onclick="filtrar('Vigilancia')">Vigilancia</button>
+</div>
 
-      document.getElementById("mensajeCarga").textContent = "🔄 Buscando...";
-      fetch(`${endpoint}?dni=${dni}`)
-        .then(res => res.json())
-        .then(data => {
-          datos = data;
-          document.getElementById("mensajeCarga").textContent = "";
-          document.getElementById("filtros").style.display = data.length > 0 ? "block" : "none";
-          renderResultados(data);
-        })
-        .catch(() => alert("Error al buscar datos"));
-    }
+<div id="totalSuma">Total: S/ 0.00</div>
 
-    function renderResultados(data) {
-      const contenedor = document.getElementById("resultados");
-      contenedor.innerHTML = "";
-      let total = 0;
+<div id="tarjetas"></div>
 
-      data.forEach((item, i) => {
-        const estadoClass = item.Estado.toLowerCase() === "pagado" ? "estado-pagado" :
-                            item.Estado.toLowerCase() === "en proceso" ? "estado-enproceso" : "estado-pendiente";
+<div class="overlay" id="overlay">Subiendo comprobante... por favor, espere un momento</div>
 
-        if (!isNaN(parseFloat(item.Monto))) total += parseFloat(item.Monto);
+<script>
+  const endpoint = "https://script.google.com/macros/s/AKfycbw7yeDDLtQiIhznHXhG0beOUv1hVjU96eqY7C-rv2XBlu5fJvj9Zwz31NzY0kA3-wiM/exec";
+  let datos = [];
 
-        const tarjeta = document.createElement("div");
-        tarjeta.className = `tarjeta tarjeta-${item.Servicio.toLowerCase()}`;
-        tarjeta.innerHTML = `
-          <div><strong>Servicio:</strong> ${item.Servicio}</div>
-          <div><strong>Fecha:</strong> ${item.Fecha}</div>
-          <div><strong>Monto:</strong> S/ ${item.Monto}</div>
-          <div><strong>Estado:</strong> <span class="estado ${estadoClass}">${item.Estado}</span></div>
-          ${item.Comprobante ? `<a class="comprobante-link" href="${item.Comprobante}" target="_blank">Ver comprobante</a>` : ""}
+  function buscarPagos() {
+    const dni = document.getElementById("dniInput").value.trim();
+    if (!dni) return alert("Por favor ingrese un DNI");
+
+    document.getElementById("buscando").style.display = "block";
+    fetch(`${endpoint}?dni=${dni}`)
+      .then(res => res.json())
+      .then(data => {
+        datos = data;
+        document.getElementById("filtros").style.display = data.length ? "block" : "none";
+        render(data);
+        document.getElementById("buscando").style.display = "none";
+      })
+      .catch(err => {
+        document.getElementById("buscando").style.display = "none";
+        alert("Error al consultar");
+      });
+  }
+
+  function render(items) {
+    const cont = document.getElementById("tarjetas");
+    cont.innerHTML = "";
+
+    let total = 0;
+
+    items.forEach((item, i) => {
+      const tarjeta = document.createElement("div");
+      tarjeta.className = "tarjeta";
+      const montoLimpio = parseFloat(item.monto.replace(/[^\d.,-]/g, '').replace(',', '.')) || 0;
+      total += montoLimpio;
+
+      const estadoClase =
+        item.estado.toLowerCase() === "pagado" ? "estado-pagado" :
+        item.estado.toLowerCase() === "en proceso" ? "estado-enproceso" : "estado-pendiente";
+
+      tarjeta.innerHTML = `
+        <div><strong>Servicio:</strong> ${item.servicio}</div>
+        <div><strong>Condición:</strong> ${item.condicion}</div>
+        <div><strong>Nombre:</strong> ${item.nombre}</div>
+        <div><strong>N°:</strong> ${item.numero}</div>
+        <div><strong>Fecha:</strong> ${item.fecha.split("T")[0]}</div>
+        <div><strong>Monto:</strong> ${item.monto}</div>
+        <div><strong>Estado:</strong> <span class="${estadoClase}">${item.estado}</span></div>
+        ${item.comprobante ? `<a class="comprobante-link" href="${item.comprobante}" target="_blank">Ver comprobante</a>` : ""}
+      `;
+
+      if (item.estado.toLowerCase() === "pendiente") {
+        const form = document.createElement("form");
+        form.innerHTML = `
+          <input type="file" id="archivo-${i}" required>
+          <button type="submit">Subir</button>
         `;
-
-        if (item.Estado.toLowerCase() === "pendiente") {
-          const form = document.createElement("form");
-          form.innerHTML = `
-            <input type="file" class="input-archivo" accept="image/*" required id="archivo-${i}">
-            <button type="submit">Subir comprobante</button>
-          `;
-          form.addEventListener("submit", e => {
-            e.preventDefault();
-            subirComprobante(item.Dni, item.Fecha, item.Servicio, i);
-          });
-          tarjeta.appendChild(form);
-        }
-
-        const botonPDF = document.createElement("button");
-        botonPDF.textContent = "Descargar boleta PDF";
-        botonPDF.onclick = () => {
-          html2pdf().from(tarjeta).save(`boleta_${item.Dni}_${item.Servicio}_${item.Fecha}.pdf`);
+        form.onsubmit = e => {
+          e.preventDefault();
+          subirComprobante(item.dni, item.numero, i);
         };
-        tarjeta.appendChild(botonPDF);
+        tarjeta.appendChild(form);
+      }
 
-        contenedor.appendChild(tarjeta);
-      });
+      const botonPDF = document.createElement("button");
+      botonPDF.innerText = "Descargar boleta";
+      botonPDF.onclick = () => descargarBoleta(item);
+      tarjeta.appendChild(botonPDF);
 
-      document.getElementById("totalPagos").textContent = `Total mostrado: S/ ${total.toFixed(2)}`;
-    }
+      cont.appendChild(tarjeta);
+    });
 
-    function subirComprobante(dni, fecha, servicio, i) {
-      const input = document.getElementById(`archivo-${i}`);
-      const archivo = input.files[0];
-      if (!archivo) return alert("Seleccione un archivo");
+    document.getElementById("totalSuma").innerText = `Total: S/ ${total.toFixed(2)}`;
+  }
 
-      document.getElementById("mensajeCarga").textContent = "📤 Subiendo...";
+  function filtrar(categoria) {
+    const filtrado = categoria ? datos.filter(d => d.servicio === categoria) : datos;
+    render(filtrado);
+  }
 
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const formData = new URLSearchParams();
-        formData.append("dni", dni);
-        formData.append("fecha", fecha);
-        formData.append("servicio", servicio);
-        formData.append("archivo", reader.result);
-        formData.append("nombre", archivo.name);
+  function subirComprobante(dni, numero, i) {
+    const input = document.getElementById(`archivo-${i}`);
+    const archivo = input.files[0];
+    if (!archivo) return alert("Selecciona un archivo");
 
-        try {
-          await fetch(endpoint, { method: "POST", body: formData });
+    const lector = new FileReader();
+    lector.onload = () => {
+      document.getElementById("overlay").style.display = "flex";
+
+      const data = new URLSearchParams();
+      data.append("dni", dni);
+      data.append("numero", numero);
+      data.append("archivo", lector.result);
+      data.append("nombre", archivo.name);
+
+      fetch(endpoint, { method: "POST", body: data })
+        .then(res => res.text())
+        .then(msg => {
+          alert(msg);
+          document.getElementById("overlay").style.display = "none";
           buscarPagos();
-        } catch {
+        })
+        .catch(() => {
           alert("Error al subir comprobante");
-        } finally {
-          document.getElementById("mensajeCarga").textContent = "";
-        }
-      };
-      reader.readAsDataURL(archivo);
-    }
+          document.getElementById("overlay").style.display = "none";
+        });
+    };
+    lector.readAsDataURL(archivo);
+  }
 
-    function filtrarCategoria(cat) {
-      const tarjetas = document.querySelectorAll(".tarjeta");
-      tarjetas.forEach(t => {
-        t.style.display = !cat || t.classList.contains(`tarjeta-${cat}`) ? "block" : "none";
-      });
-    }
-  </script>
+  function descargarBoleta(data) {
+    const elemento = document.createElement("div");
+    elemento.innerHTML = `
+      <h3>Boleta de Pago</h3>
+      <p><strong>Nombre:</strong> ${data.nombre}</p>
+      <p><strong>Servicio:</strong> ${data.servicio}</p>
+      <p><strong>N°:</strong> ${data.numero}</p>
+      <p><strong>Fecha:</strong> ${data.fecha.split("T")[0]}</p>
+      <p><strong>Monto:</strong> ${data.monto}</p>
+      <p><strong>Estado:</strong> ${data.estado}</p>
+    `;
+
+    html2pdf().from(elemento).set({ filename: `boleta_${data.numero}.pdf` }).save();
+  }
+</script>
 </body>
 </html>
