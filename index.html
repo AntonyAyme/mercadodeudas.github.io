@@ -146,17 +146,21 @@ const endpoint = "https://script.google.com/macros/s/AKfycbxwHyZTucXsq4fJyPFlW91
 
     document.getElementById("buscando").style.display = "block";
     fetch(`${endpoint}?dni=${dni}`)
-      .then(res => res.json())
-      .then(data => {
-        datos = data;
-        document.getElementById("filtros").style.display = data.length ? "block" : "none";
-        render(data);
-        document.getElementById("buscando").style.display = "none";
-      })
-      .catch(err => {
-        document.getElementById("buscando").style.display = "none";
-        alert("Error al consultar");
-      });
+  .then(res => {
+    if (!res.ok) throw new Error("HTTP Error: " + res.status);
+    return res.json();
+  })
+  .then(data => {
+    datos = data;
+    document.getElementById("filtros").style.display = data.length ? "block" : "none";
+    render(data);
+    document.getElementById("buscando").style.display = "none";
+  })
+  .catch(err => {
+    console.error("ERROR:", err);
+    document.getElementById("buscando").style.display = "none";
+    alert("Error al consultar");
+  });
   }
 
   function render(items) {
